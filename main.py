@@ -15,7 +15,7 @@ openai_api_key = os.environ.get('OPENAI_API_KEY')
 st .title("PDF Chatbot")
 
 if 'responses' not in st.session_state:
-    st.session_state['response'] = ['How can i assit you']
+    st.session_state['responses'] = ['How can i assit you']
 if 'requests' not in st.session_state:
     st.session_state['requests'] = []
 
@@ -25,18 +25,17 @@ llm = ChatOpenAI(
     )
 
 if 'buffer_memory' not in st.session_state:
-    st.session_state.buffur_memory = ConversationBufferWindowMemory(k=3,return_messages=True)
+    st.session_state['buffer_memory'] = ConversationBufferWindowMemory(k=3,return_messages=True)
 
 system_msg_template = SystemMessagePromptTemplate.from_template(
-    template="Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below ,say 'i don't know' " 
-)
+    template="""Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below ,say 'i don't know'  """)
 
 human_msg_template = HumanMessagePromptTemplate.from_template(template="{input}")
 
-prompt_template = ChatPromptTemplate.from_template([system_msg_template,MessagesPlaceholder(variable_name='history'), human_msg_template])
+prompt_template = ChatPromptTemplate.from_messages([system_msg_template,MessagesPlaceholder(variable_name='history'), human_msg_template])
 
 
-conversation = ConversationChain(memory=st.session_state.buffer_memory, prompt=prompt_template, llm=llm, verbose=True)
+conversation = ConversationChain(memory=st.session_state['buffer_memory'], prompt=prompt_template, llm=llm, verbose=True)
 
  
 response_container = st.container()
@@ -45,7 +44,8 @@ text_container = st.container()
 
 with text_container:
     query = st.text_input("Query: ", key="input")
-    if query:
+    submit_button = st.button("Submit")
+    if submit_button:
         with st.spinner("typing..."):
             conversation_string = get_conversation_string()
             refined_query = query_refiner(conversation_string, query)
@@ -55,6 +55,7 @@ with text_container:
             response = conversation.predict(input=f"Context:\n {context} \n\n Query:\n {query}")
         st.session_state.requests.append(query)
         st.session_state.responses.append(response)
+
 with response_container:
     if st.session_state['responses']:
         for i in range(len(st.session_state['responses'])):
